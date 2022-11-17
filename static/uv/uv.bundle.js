@@ -43,7 +43,6 @@ class HTML extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
             this.iterate(ast, fn, options);
             return (0,parse5__WEBPACK_IMPORTED_MODULE_1__.serialize)(ast);
         } catch(e) {
-            console.log(e);
             return str;
         };
     };
@@ -35508,23 +35507,7 @@ async function db(openDB) {
 
 function serialize(cookies = [], meta, js) {
     let str = '';
-    const now = new Date();
     for (const cookie of cookies) {
-
-        let expired = false;
-
-        if (cookie.set) {
-            if (cookie.maxAge) {
-                expired =  cookie.set.getTime() + (cookie.maxAge * 1e3) < now;
-            } else if (cookie.expires) {
-                expired = cookie.expires > now;
-            };
-        };
-
-        if (expired) {  
-
-            continue;
-        };
         if (!validateCookie(cookie, meta, js)) continue;
         if (str.length) str += '; ';
         str += cookie.name;
@@ -37656,8 +37639,15 @@ class AttrApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
         this.attrProto = this.Attr.prototype || {};
         this.value = ctx.nativeMethods.getOwnPropertyDescriptor(this.attrProto, 'value');
         this.name = ctx.nativeMethods.getOwnPropertyDescriptor(this.attrProto, 'name');
+        this.getNamedItem = this.attrProto.getNamedItem || null;
+        this.setNamedItem = this.attrProto.setNamedItem || null;
+        this.removeNamedItem = this.attrProto.removeNamedItem || null;
+        this.getNamedItemNS = this.attrProto.getNamedItemNS || null;
+        this.setNamedItemNS = this.attrProto.setNamedItemNS || null;
+        this.removeNamedItemNS = this.attrProto.removeNamedItemNS || null;
+        this.item = this.attrProto.item || null;
     };
-    override() {
+    overrideNameValue() {
         this.ctx.overrideDescriptor(this.attrProto, 'name', {
             get: (target, that) => {
                 const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ value: target.call(that) }, target, that);
@@ -37683,6 +37673,78 @@ class AttrApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
                 if (event.intercepted) return event.returnValue;
                 event.target.call(event.that, event.data.value);
             }
+        });
+    };
+    overrideItemMethods() {
+        this.ctx.override(this.attrProto, 'getNamedItem', (target, that, args) => {
+            if (!args.length) return target.apply(that, args);
+            let [ name ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ name }, target, that);
+            this.emit('getNamedItem', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.name);
+        });
+        this.ctx.override(this.attrProto, 'setNamedItem', (target, that, args) => {
+            if (2 > args.length) return target.apply(that, args);
+            let [ name, value ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ name, value }, target, that);
+            this.emit('setNamedItem', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.name, event.data.value);
+        });
+        this.ctx.override(this.attrProto, 'removeNamedItem', (target, that, args) => {
+            if (!args.length) return target.apply(that, args);
+            let [ name ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ name }, target, that);
+            this.emit('removeNamedItem', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.name);
+        });
+        this.ctx.override(this.attrProto, 'item', (target, that, args) => {
+            if (!args.length) return target.apply(that, args);
+            let [ index ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ index }, target, that);
+            this.emit('item', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.name);
+        });
+        this.ctx.override(this.attrProto, 'getNamedItemNS', (target, that, args) => {
+            if (2 > args.length) return target.apply(that, args);
+            let [ namespace, localName ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ namespace, localName }, target, that);
+            this.emit('getNamedItemNS', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.namespace, event.data.localName);
+        });
+        this.ctx.override(this.attrProto, 'setNamedItemNS', (target, that, args) => {
+            if (!args.length) return target.apply(that, args);
+            let [ attr ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ attr }, target, that);
+            this.emit('setNamedItemNS', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.name);
+        });
+        this.ctx.override(this.attrProto, 'removeNamedItemNS', (target, that, args) => {
+            if (2 > args.length) return target.apply(that, args);
+            let [ namespace, localName ] = args;
+
+            const event = new _hook_js__WEBPACK_IMPORTED_MODULE_1__["default"]({ namespace, localName }, target, that);
+            this.emit('removeNamedItemNS', event);
+
+            if (event.intercepted) return event.returnValue;
+            return event.target.call(event.that, event.data.namespace, event.data.localName);
         });
     };
 };
@@ -38002,6 +38064,10 @@ class WebSocketApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
         this.protocol = ctx.nativeMethods.getOwnPropertyDescriptor(this.wsProto, 'protocol');
         this.send = this.wsProto.send;
         this.close = this.wsProto.close;
+        this.CONNECTING = 0;
+        this.OPEN = 1;
+        this.CLOSING = 2;
+        this.CLOSED = 3;
     };
     overrideWebSocket() {
         this.ctx.override(this.window, 'WebSocket', (target, that, args) => {
@@ -38015,6 +38081,11 @@ class WebSocketApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
             if (event.intercepted) return event.returnValue;
             return new event.target(event.data.url, event.data.protocols);
         }, true);
+
+        this.window.WebSocket.CONNECTING = this.CONNECTING;
+        this.window.WebSocket.OPEN = this.OPEN;
+        this.window.WebSocket.CLOSING = this.CLOSING;
+        this.window.WebSocket.CLOSED = this.CLOSED;
     };
     overrideUrl() {
         this.ctx.overrideDescriptor(this.wsProto, 'url', {
@@ -38181,6 +38252,9 @@ class EventSourceApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] 
         this.EventSource = this.window.EventSource || {};
         this.esProto = this.EventSource.prototype || {};
         this.url = ctx.nativeMethods.getOwnPropertyDescriptor(this.esProto, 'url');
+        this.CONNECTING = 0;
+        this.OPEN = 1;
+        this.CLOSED = 2;
     };
     overrideConstruct() {
         this.ctx.override(this.window, 'EventSource', (target, that, args) => {
@@ -38193,6 +38267,12 @@ class EventSourceApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] 
             if (event.intercepted) return event.returnValue;
             return new event.target(event.data.url, event.data.config);
         }, true);
+
+        if ('EventSource' in this.window) {
+            this.window.EventSource.CONNECTING = this.CONNECTING;
+            this.window.EventSource.OPEN = this.OPEN;
+            this.window.EventSource.CLOSED = this.CLOSED;
+        };
     };
     overrideUrl() {
         this.ctx.overrideDescriptor(this.esProto, 'url', {
@@ -38306,14 +38386,19 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
-class LocationApi {
+/* harmony import */ var _events_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(155);
+
+
+class LocationApi extends _events_js__WEBPACK_IMPORTED_MODULE_0__["default"] {
     constructor(ctx) {
+        super();
         this.ctx = ctx;
         this.window = ctx.window;
         this.location = this.window.location;
         this.WorkerLocation = this.ctx.worker ? this.window.WorkerLocation : null;
         this.workerLocProto = this.WorkerLocation ? this.WorkerLocation.prototype : {};
         this.keys = ['href', 'protocol', 'host', 'hostname', 'port', 'pathname', 'search', 'hash', 'origin'];
+        this.HashChangeEvent = this.window.HashChangeEvent || null;
         this.href = this.WorkerLocation ? ctx.nativeMethods.getOwnPropertyDescriptor(this.workerLocProto, 'href') : 
         ctx.nativeMethods.getOwnPropertyDescriptor(this.location, 'href');
     };
@@ -38350,7 +38435,7 @@ class LocationApi {
                             that.location.href = wrap(val);
                             break;
                         case 'hash':
-                            that.location.hash = val;
+                            that.emit('hashchange', emulation.href, (val.trim().startsWith('#') ? new URL(val.trim(), emulation.href).href : new URL('#' + val.trim(), emulation.href).href), that);
                             break;
                         default:
                             const url = new URL(emulation.href);
@@ -39043,7 +39128,6 @@ __webpack_require__.r(__webpack_exports__);
 
  
 
-//import { call, destructureDeclaration, dynamicImport, getProperty, importDeclaration, setProperty, sourceMethods, wrapEval, wrapIdentifier } from './rewrite.script.js';
 
  
 
@@ -39057,7 +39141,6 @@ const reserved_chars = "%";
 class Ultraviolet {
     constructor(options = {}) {
         this.prefix = options.prefix || '/service/';
-        //this.urlRegex = /^(#|about:|data:|mailto:|javascript:)/;
         this.urlRegex = /^(#|about:|data:|mailto:)/
         this.rewriteUrl = options.rewriteUrl || this.rewriteUrl;
         this.sourceUrl = options.sourceUrl || this.sourceUrl;
@@ -39067,9 +39150,9 @@ class Ultraviolet {
         this.meta = options.meta || {};
         this.meta.base ||= undefined;
         this.meta.origin ||= '';
-        this.bundleScript = options.bundleScript || '/uv.bundle.js';
-        this.handlerScript = options.handlerScript || '/uv.handler.js';
-        this.configScript = options.handlerScript || '/uv.config.js';
+        this.bundleScript = options.bundle || '/uv.bundle.js';
+        this.handlerScript = options.handler || '/uv.handler.js';
+        this.configScript = options.config || '/uv.config.js';
         this.meta.url ||= this.meta.base || '';
         this.codec = Ultraviolet.codec;
         this.html = new _html_js__WEBPACK_IMPORTED_MODULE_0__["default"](this);
