@@ -43,7 +43,7 @@ I also a few things to say after creating this:
 ___
 # Getting started
 
-You can use the given website... but I highly reccomend froking and using your own. (Instructions are given after you fork this project. Try it yourself!). This is because the priginal website might get stressed way too mcuh and make it harder for unblocking things.
+You can use the given website... but I highly reccomend froking and using your own. (Instructions are given after you fork this project. Try it yourself!). This is because the priginal website might get stressed way too much and make it harder for unblocking things.
 
 ### Disclaimer!
 
