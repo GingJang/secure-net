@@ -2,6 +2,10 @@
 
 * {
     font-family: Fredoka One;
+    --cursorText: url("/cursors/textD.png"), text;
+    --cursorNormal: url("/cursors/normalD.png"), default;
+    --cursorHand: url("/cursors/handD.png"), pointer;
+  cursor: var(--cursorNormal) !important;
 }
 
 body {
@@ -58,6 +62,17 @@ body {
     color: #FFF;
     z-index: 100;
 }
+.Clock {
+    margin-top: auto;
+    width: 97%;
+    align-self: center;
+    height: 80px;
+    display: flex;
+    justify-content: right;
+    align-items: center;
+    z-index: 100;
+}
+
 
 footer {
     margin-top: auto;
